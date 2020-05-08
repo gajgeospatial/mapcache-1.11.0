@@ -42,6 +42,7 @@
 #include "cpl_string.h"
 #include "ogr_srs_api.h"
 #include "gdal_vrt.h"
+#include <mapserver.h>
 
 #define MAPCACHE_DEFAULT_RESAMPLE_ALG           GRA_Bilinear
 
@@ -88,7 +89,16 @@ void mapcache_source_gdal_connection_constructor(mapcache_context *ctx, void **c
   /* -------------------------------------------------------------------- */
   /*      Open source dataset.                                            */
   /* -------------------------------------------------------------------- */
-  c->hSrcDS = GDALOpen( p->gdal_data, GA_ReadOnly );
+  char * np_decrypted_path = NULL;
+  char ** options = NULL;
+  int haveTable = msHasRasterTable(p->gdal_data, &np_decrypted_path, &options);
+  if (haveTable)
+  {
+	  c->hSrcDS = GDALOpenEx(np_decrypted_path, GDAL_OF_RASTER | GDAL_OF_UPDATE, NULL, options, NULL);
+	  msFreeRasterTable(&np_decrypted_path, &options);
+  }
+  else
+	c->hSrcDS = GDALOpen( p->gdal_data, GA_ReadOnly );
 
   if( c->hSrcDS == NULL ) {
     ctx->set_error(ctx, 500, "Cannot open gdal source for %s .\n", p->gdal->source.name );
@@ -664,7 +674,18 @@ void _mapcache_source_gdal_configuration_check(mapcache_context *ctx, mapcache_c
     ctx->set_error(ctx, 500, "gdal source %s has no data",source->name);
     return;
   }
-  hDataset = GDALOpen(src->datastr,GA_ReadOnly);
+
+  char * np_decrypted_path = NULL;
+  char ** options = NULL;
+  int haveTable = msHasRasterTable(src->datastr, &np_decrypted_path, &options);
+  if (haveTable)
+  {
+	  hDataset = GDALOpenEx(np_decrypted_path, GDAL_OF_RASTER | GDAL_OF_UPDATE, NULL, options, NULL);
+	  msFreeRasterTable(&np_decrypted_path, &options);
+  }
+  else
+	hDataset = GDALOpen(src->datastr,GA_ReadOnly);
+
   if( hDataset == NULL ) {
     ctx->set_error(ctx, 500, "gdalOpen failed on data %s", src->datastr);
     return;

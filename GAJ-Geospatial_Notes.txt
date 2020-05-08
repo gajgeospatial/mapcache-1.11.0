@@ -1,0 +1,6 @@
+Set envionment for this project as MAPCACHE_DIR
+
+Changed files in mapcache-1.11.0 to support tile Geopackage CDB Content
+
+source_gdal.c	//Check for table name on open
+source_mapserver.c //fixed typo on source.query_info
